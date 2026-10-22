@@ -1,0 +1,15 @@
+[package]
+name = "sqlite-spike"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled", "column_decltype"] }
+[workspace]
+[profile.release]
+strip = true
+[profile.small]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

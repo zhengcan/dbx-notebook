@@ -1,0 +1,9 @@
+{
+  "name": "dbx-notebook",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "plugin/ui-src"
+  ]
+}

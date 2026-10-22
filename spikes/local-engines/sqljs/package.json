@@ -1,0 +1,1 @@
+{"name":"sqljs-spike","version":"0.0.0","private":true,"type":"module","dependencies":{"@duckdb/duckdb-wasm":"^1.33.1-dev57.0","sql.js":"^1.15.0"}}

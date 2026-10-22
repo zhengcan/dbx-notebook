@@ -1,0 +1,27 @@
+sqlnb: "1"
+metadata:
+  title: "Orders by status"
+settings:
+  defaultConnection: "prod-pg"
+  outputs: "separate"
+connections:
+  - name: "prod-pg"
+    dialect: "postgres"
+blocks:
+  - id: "b_in01"
+    type: "input"
+    metadata:
+      variable: "start_date"
+      inputType: "date"
+      value: "2026-09-01"
+  - id: "b_q001"
+    type: "sql"
+    content: |
+      select status, count(*) as n
+      from orders
+      where created_at >= {{ start_date }}
+      group by status
+  - id: "b_q002"
+    type: "sql"
+    content: |
+      select * from missing_table

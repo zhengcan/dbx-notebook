@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+import http from "http"; import fs from "fs"; import path from "path";
+const mime={".js":"text/javascript",".html":"text/html",".css":"text/css"};
+const srv=http.createServer((q,r)=>{let p=path.join("dist",q.url==="/"?"index.html":q.url.split("?")[0]);
+ try{r.setHeader("content-type",mime[path.extname(p)]||"text/plain");r.end(fs.readFileSync(p))}catch{r.statusCode=404;r.end()}}).listen(8765);
+const b=await chromium.launch({channel:"chrome"});const pg=await b.newPage();
+pg.on("console",m=>console.log("console:",m.type(),m.text()));
+pg.on("pageerror",e=>console.log("pageerror:",e.message));
+await pg.goto("http://localhost:8765/");await pg.waitForTimeout(2000);
+console.log("out:",await pg.textContent("#out"));await b.close();srv.close();

@@ -1,0 +1,16 @@
+[package]
+name = "df-spike"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+datafusion = { version = "55", default-features = false, features = ["sql", "unicode_expressions", "datetime_expressions", "regex_expressions", "string_expressions", "math_expressions"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+[workspace]
+[profile.release]
+strip = true
+[profile.small]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

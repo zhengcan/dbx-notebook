@@ -1,0 +1,10 @@
+[package]
+name = "pdf-oxide-spike"
+version = "0.0.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+pdf_oxide = "0.3.78"
+png = "0.17"

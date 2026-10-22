@@ -1,0 +1,47 @@
+{
+  "sqlnbOut": "1",
+  "outputs": {
+    "b_q001": {
+      "columns": [
+        {
+          "name": "status",
+          "type": "text"
+        },
+        {
+          "name": "n",
+          "type": "int8"
+        }
+      ],
+      "rows": [
+        [
+          "refunded",
+          12
+        ],
+        [
+          "partial",
+          3
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      "executedAt": "2026-10-17T14:31:00Z",
+      "elapsedMs": 84,
+      "truncated": false,
+      "sqlHash": "fnv1a32:62609f65",
+      "params": {
+        "start_date": "2026-09-01"
+      }
+    },
+    "b_q002": {
+      "columns": [],
+      "rows": [],
+      "executedAt": "2026-10-17T14:32:00Z",
+      "elapsedMs": 0,
+      "truncated": false,
+      "error": "relation \"missing_table\" does not exist",
+      "sqlHash": "fnv1a32:9f9a81fa"
+    }
+  }
+}

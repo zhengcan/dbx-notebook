@@ -1,0 +1,21 @@
+[package]
+name = "pdf-typst-spike"
+version = "0.0.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+typst-as-lib = "0.17"
+typst-pdf = "0.15"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = 3
+codegen-units = 1
+panic = "abort"
+
+[profile.small]
+inherits = "release"
+opt-level = "z"

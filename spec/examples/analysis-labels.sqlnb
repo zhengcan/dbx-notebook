@@ -1,0 +1,50 @@
+sqlnb: "1"
+blocks:
+  - id: "b_sql1"
+    type: "sql"
+    content: |
+      SELECT channel, vip, amount FROM sales
+    metadata:
+      resultName: "sales"
+  - id: "b_lab1"
+    type: "chart"
+    metadata:
+      data: "sales"
+      pivot:
+        rows:
+          - field: "channel"
+            label: "渠道"
+            valueLabels: { online: "线上", store: "门店" }
+            nullLabel: "未知"
+        columns:
+          - field: "vip"
+            label: "会员"
+            valueLabels: { "0": "否", "1": "是" }
+        values:
+          - field: "amount"
+            agg: "sum"
+            label: "销售额"
+            format: { kind: "thousands", decimals: 1, unit: "万元", scale: 10000 }
+        totals: { row: true, column: true, grand: true }
+        summaryLabel: "合计"
+        sort: null
+      view: "both"
+      chartOptions:
+        type: "bar"
+        stacking: "stacked"
+        labels: false
+        title: "各渠道销售额"
+        axisTitles: { x: "渠道", y: "销售额（万元）", legend: "VIP" }
+      spec:
+        $schema: "https://vega.github.io/schema/vega-lite/v5.json"
+        title: "各渠道销售额"
+        data: { name: "sales" }
+        mark: { type: "bar" }
+        encoding:
+          x: { field: "channel", type: "nominal", title: "channel" }
+          y: { field: "amount", type: "quantitative", title: "销售额", aggregate: "sum", stack: "zero" }
+          color: { field: "vip", type: "nominal", title: "vip" }
+          tooltip:
+            - { field: "channel", type: "nominal", title: "channel" }
+            - { field: "vip", type: "nominal", title: "vip" }
+            - { field: "amount", type: "quantitative", title: "销售额", aggregate: "sum", format: ",.1f" }

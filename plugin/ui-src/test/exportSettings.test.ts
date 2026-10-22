@@ -1,0 +1,160 @@
+import { describe, it, expect } from 'vitest'
+import { createExportSettings, notebookKey, normalizeMemory, MAX_NOTEBOOKS } from '../src/export/exportSettings'
+import { createFakeBridge } from '../src/host/fakeBridge'
+import { DEFAULT_EXPORT_OPTIONS, type ExportOptions } from '../src/export/options'
+
+function shared() {
+  const m = new Map<string, unknown>()
+  return { m, opts: { async storageGet(k: string) { return (m.get(k) ?? null) as any }, async storageSet(k: string, v: unknown) { m.set(k, v) } } }
+}
+const fresh = (s: ReturnType<typeof shared>) => createExportSettings(createFakeBridge(s.opts as any))
+const opt = (o: Partial<ExportOptions> = {}): ExportOptions => ({ ...DEFAULT_EXPORT_OPTIONS, ...o })
+const state = (o: Partial<ExportOptions> = {}, folder = '/out') => ({ options: opt(o), folder })
+
+describe('exportSettings per notebook', () => {
+  it('saved memory has no fileName key', async () => {
+    const s = shared(); const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({ note: 'x' }, '/f'), [])
+    const e = (s.m.get('export.notebooks.v1') as any).items[0]
+    expect('fileName' in e).toBe(false)
+    expect(e.folder).toBe('/f')
+    expect('fileName' in a).toBe(false)
+  })
+  it('old stored memory with fileName still loads (ignored)', async () => {
+    const s = shared()
+    s.m.set('export.notebooks.v1', { items: [{ key: notebookKey('/n/a.sqlnb'), options: { note: 'o' }, fileName: 'old.pdf', folder: '/of' }] })
+    const a = fresh(s)
+    await a.load('/n/a.sqlnb', [])
+    expect(a.options.value.note).toBe('o'); expect(a.folder.value).toBe('/of')
+    expect('fileName' in normalizeMemory({ items: [{ key: 'k', fileName: 'z' }] })[0]).toBe(false)
+  })
+  it('defaults when nothing is stored', async () => {
+    const a = fresh(shared())
+    await a.load('/n/a.sqlnb', ['b1'])
+    expect(a.options.value).toEqual(DEFAULT_EXPORT_OPTIONS)
+    expect(a.folder.value).toBe('')
+  })
+  it('restores general options, per-block settings, file name and folder for the same notebook', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({ includeSql: true, orientation: 'landscape', note: 'hi', columnBreaks: { b1: [2] }, blocks: { b2: { include: false, transpose: 'on' } } }), ['b1', 'b2'])
+    const b = fresh(s)
+    await b.load('/n/a.sqlnb', ['b1', 'b2'])
+    expect(b.options.value).toMatchObject({ includeSql: true, orientation: 'landscape', note: 'hi', columnBreaks: { b1: [2] }, blocks: { b2: { include: false, transpose: 'on' } } })
+    expect(b.folder.value).toBe('/out')
+  })
+  it('old remembered settings (header.* and filtersLine) restore checkbox states', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({ filtersLine: false, header: { ...DEFAULT_EXPORT_OPTIONS.header, exporter: false, exportedAt: false, dataSource: false, dataRunAt: false } }), [])
+    const b = fresh(s)
+    await b.load('/n/a.sqlnb', [])
+    expect(b.options.value.filtersLine).toBe(false)
+    expect(b.options.value.header).toMatchObject({ exporter: false, exportedAt: false, dataSource: false, dataRunAt: false })
+  })
+  it('two notebooks are independent', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({ note: 'A' }, '/fa'), [])
+    await a.save('/n/b.sqlnb', state({ note: 'B' }, '/fb'), [])
+    const c = fresh(s)
+    await c.load('/n/a.sqlnb', []); expect(c.options.value.note).toBe('A')
+    await c.load('/n/b.sqlnb', []); expect(c.options.value.note).toBe('B'); expect(c.folder.value).toBe('/fb')
+    await c.load('/n/other.sqlnb', []); expect(c.options.value).toEqual(DEFAULT_EXPORT_OPTIONS)
+  })
+  it('unsaved notebooks only use defaults plus the last folder', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save(null, state({ note: 'secret' }, '/last'), [])
+    expect(s.m.has('export.notebooks.v1')).toBe(false)
+    const b = fresh(s)
+    await b.load(null, [])
+    expect(b.options.value).toEqual(DEFAULT_EXPORT_OPTIONS)
+    expect(b.folder.value).toBe('/last')
+    const c = fresh(s)
+    await c.load('/n/new.sqlnb', [])
+    expect(c.folder.value).toBe('/last')
+    expect(c.options.value.note).toBe('')
+  })
+  it('the last folder is a fallback only when the notebook has none', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({}, '/fa'), [])
+    await a.save('/n/b.sqlnb', state({}, '/fb'), [])
+    const c = fresh(s)
+    await c.load('/n/a.sqlnb', []); expect(c.folder.value).toBe('/fa')
+  })
+  it('prunes settings of blocks that no longer exist, on save and on load', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.save('/n/a.sqlnb', state({ columnBreaks: { b1: [1], gone: [2] }, blocks: { b1: { include: false, transpose: 'follow' }, gone: { include: false, transpose: 'on' } } }), ['b1', 'gone'])
+    const stored = (s.m.get('export.notebooks.v1') as any).items[0].options
+    expect(Object.keys(stored.columnBreaks)).toEqual(['b1', 'gone'])
+    const b = fresh(s)
+    await b.load('/n/a.sqlnb', ['b1'])
+    expect(b.options.value.columnBreaks).toEqual({ b1: [1] })
+    expect(Object.keys(b.options.value.blocks)).toEqual(['b1'])
+    await b.save('/n/a.sqlnb', { options: b.options.value, folder: '/f' }, ['b1'])
+    expect(Object.keys((s.m.get('export.notebooks.v1') as any).items[0].options.columnBreaks)).toEqual(['b1'])
+  })
+  it('caps remembered notebooks and drops the least recently used', async () => {
+    const s = shared()
+    const a = fresh(s)
+    for (let i = 0; i < MAX_NOTEBOOKS + 5; i++) await a.save(`/n/${i}.sqlnb`, state({ note: String(i) }), [])
+    const items = (s.m.get('export.notebooks.v1') as any).items
+    expect(items).toHaveLength(MAX_NOTEBOOKS)
+    expect(items[0].key).toBe(notebookKey(`/n/${MAX_NOTEBOOKS + 4}.sqlnb`))
+    const b = fresh(s)
+    await b.load('/n/0.sqlnb', []); expect(b.options.value.note).toBe('')
+    await b.save('/n/10.sqlnb', state({ note: 'again' }), [])
+    expect((s.m.get('export.notebooks.v1') as any).items[0].key).toBe(notebookKey('/n/10.sqlnb'))
+    expect((s.m.get('export.notebooks.v1') as any).items).toHaveLength(MAX_NOTEBOOKS)
+  })
+  it('hashes long paths into a bounded, distinct key', () => {
+    const p1 = '/' + 'a'.repeat(400) + '1.sqlnb'; const p2 = '/' + 'a'.repeat(400) + '2.sqlnb'
+    expect(notebookKey('/n/a.sqlnb')).toContain('/n/a.sqlnb')
+    expect(notebookKey(p1).length).toBeLessThan(60)
+    expect(notebookKey(p1)).not.toBe(notebookKey(p2))
+    expect(notebookKey(p1)).toBe(notebookKey(p1))
+  })
+  it('normalises garbage in storage', async () => {
+    for (const raw of ['x', 5, [], { items: 'no' }, { items: [1, null, { key: 5 }, { key: '' }, { key: 'k', options: 'zz', fileName: 7, folder: {} }] }]) {
+      const m = normalizeMemory(raw)
+      expect(Array.isArray(m)).toBe(true)
+      for (const e of m) { expect(typeof e.key).toBe('string'); expect(typeof e.folder).toBe('string') }
+    }
+    expect(normalizeMemory({ items: [{ key: 'k', options: { rowLimit: -4, repeatCols: 99, orientation: 'z' }, fileName: 7 }] })[0].options).toMatchObject({ rowLimit: 1, repeatCols: 5, orientation: 'portrait' })
+    expect(normalizeMemory({ items: [{ key: 'k' }, { key: 'k' }] })).toHaveLength(1)
+    const s = shared()
+    s.m.set('export.notebooks.v1', { items: [{ key: notebookKey('/n/a.sqlnb'), options: { format: 'x', rowLimit: -4 }, fileName: 3, folder: null }] })
+    s.m.set('export.browserPath.v1', 42)
+    s.m.set('export.lastFolder.v1', 9)
+    const a = fresh(s)
+    await a.load('/n/a.sqlnb', [])
+    expect(a.options.value).toMatchObject({ format: 'pdf', rowLimit: 1 })
+    expect(a.browserPath.value).toBe(''); expect(a.folder.value).toBe('')
+  })
+  it('never throws when storage throws or hangs, keeps values in memory', async () => {
+    const bad = createExportSettings(createFakeBridge({ async storageGet() { throw new Error('x') }, async storageSet() { throw new Error('y') } } as any))
+    await bad.load('/n/a.sqlnb', [])
+    expect(bad.options.value).toEqual(DEFAULT_EXPORT_OPTIONS)
+    await bad.save('/n/a.sqlnb', state({ includeSql: true }), [])
+    expect(bad.options.value.includeSql).toBe(true)
+    await bad.setBrowserPath('/x')
+    expect(bad.browserPath.value).toBe('/x')
+    const hang = createExportSettings(createFakeBridge({ storageGet: () => new Promise(() => {}), storageSet: () => new Promise(() => {}) } as any), { timeoutMs: 20 })
+    await hang.load('/n/a.sqlnb', [])
+    expect(hang.options.value).toEqual(DEFAULT_EXPORT_OPTIONS)
+    await hang.save('/n/a.sqlnb', state({ note: 'n' }), [])
+    expect(hang.options.value.note).toBe('n')
+  })
+  it('trims and persists the browser path', async () => {
+    const s = shared()
+    const a = fresh(s)
+    await a.setBrowserPath('  /Applications/Brave.app/x  ')
+    expect(s.m.get('export.browserPath.v1')).toBe('/Applications/Brave.app/x')
+    const b = fresh(s)
+    await b.load(null, [])
+    expect(b.browserPath.value).toBe('/Applications/Brave.app/x')
+  })
+})

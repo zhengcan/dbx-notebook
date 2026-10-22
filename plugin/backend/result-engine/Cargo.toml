@@ -1,0 +1,12 @@
+[package]
+name = "result-engine"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace]
+
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled", "functions", "window", "column_decltype", "hooks", "limits"] }
+serde_json = "1"
+regex = "1"

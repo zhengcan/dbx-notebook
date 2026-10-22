@@ -1,0 +1,15 @@
+[package]
+name = "duckdb-spike"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+duckdb = { version = "1", features = ["bundled"] }
+[workspace]
+[profile.release]
+strip = true
+[profile.small]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

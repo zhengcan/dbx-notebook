@@ -1,0 +1,168 @@
+sqlnb: "1"
+metadata:
+  title: "Order refund analysis"
+  createdAt: "2026-10-17T12:00:00Z"
+  modifiedAt: "2026-10-17T14:30:00Z"
+settings:
+  defaultConnection: "prod-pg"
+  outputs: "separate"
+connections:
+  - name: "prod-pg"
+    dialect: "postgres"
+  - name: "warehouse"
+    dialect: "clickhouse"
+blocks:
+  - id: "b_7f3k"
+    type: "markdown"
+    content: |
+      ## Refunds last month
+  - id: "b_9q2m"
+    type: "input"
+    metadata:
+      variable: "start_date"
+      inputType: "date"
+      value: "2026-09-01"
+  - id: "b_in02"
+    type: "input"
+    metadata:
+      variable: "statuses"
+      inputType: "select"
+      multiple: true
+      options: ["refunded", "partial", "disputed"]
+      value: ["refunded", "partial"]
+  - id: "b_in03"
+    type: "input"
+    metadata:
+      variable: "customer"
+      inputType: "text"
+      value: "O'Brien"
+  - id: "b_in04"
+    type: "input"
+    metadata:
+      variable: "min_total"
+      inputType: "number"
+      value: -5
+  - id: "b_in05"
+    type: "input"
+    metadata:
+      variable: "include_test"
+      inputType: "boolean"
+      value: false
+  - id: "b_x81d"
+    type: "sql"
+    content: |
+      SELECT status, count(*) AS total
+      FROM orders
+      WHERE created_at >= {{ start_date }}
+        AND status IN {{ statuses }}
+        AND customer <> {{ customer }}
+        AND total > {{ min_total }}
+        AND is_test = {{ include_test }}
+      GROUP BY status
+    metadata:
+      resultName: "refunds"
+      connection: "warehouse"
+      database: "shop"
+      schema: "public"
+  - id: "b_c0aa"
+    type: "sql"
+    content: |
+      SELECT * FROM refunds WHERE total > 10
+    metadata:
+      resultName: "big_refunds"
+      source: "results"
+  - id: "b_loc2"
+    type: "sql"
+    content: |
+      SELECT status, median(total) AS med_total
+      FROM refunds
+      GROUP BY 1
+    metadata:
+      resultName: "refund_medians"
+      source: "results"
+  - id: "b_x82e"
+    type: "sql"
+    content: |
+      SELECT 1 AS probe
+    metadata:
+      connection: "prod-pg"
+  - id: "b_ch01"
+    type: "chart"
+    metadata:
+      data: "refunds"
+      spec:
+        mark: "bar"
+        encoding:
+          x: { field: "status", type: "nominal" }
+          y: { field: "total", type: "quantitative" }
+  - id: "b_kpi1"
+    type: "big-number"
+    metadata:
+      data: "refunds"
+      value: { field: "total", aggregate: "sum" }
+      label: "Total refunds"
+  - id: "b_kpi3"
+    type: "big-number"
+    metadata:
+      data: "refunds"
+      value: { field: "total", aggregate: "sum" }
+      label: "Total refunds"
+      metrics:
+        - { field: "total", aggregate: "sum", label: "Total refunds" }
+        - { field: "total", aggregate: "max", label: "Largest refund" }
+        - { field: "", aggregate: "count", label: "Refund count" }
+  - id: "b_sal1"
+    type: "sql"
+    content: |
+      SELECT order_date, region, amount FROM sales
+    metadata:
+      resultName: "monthly_sales"
+      connection: "prod-pg"
+  - id: "b_ch02"
+    type: "chart"
+    metadata:
+      data: "monthly_sales"
+      pivot:
+        rows:
+          - field: "order_date"
+            grain: "month"
+        columns:
+          - field: "region"
+        values:
+          - field: "amount"
+            agg: "sum"
+            label: "Sales"
+            format: { kind: "thousands", decimals: 0 }
+            summary: "sum"
+        totals: { row: true, column: true, grand: true }
+        sort: null
+      view: "both"
+      chartOptions:
+        type: "line"
+        stacking: "none"
+        labels: false
+        timeAxis: "compact"
+        title: "Sales by month and region"
+      spec:
+        $schema: "https://vega.github.io/schema/vega-lite/v5.json"
+        title: "Sales by month and region"
+        data: { name: "monthly_sales" }
+        mark: { type: "line" }
+        encoding:
+          x: { field: "order_date", type: "ordinal", title: "order_date", timeUnit: "yearmonth", sort: "ascending" }
+          y: { field: "amount", type: "quantitative", title: "Sales", aggregate: "sum" }
+          color: { field: "region", type: "nominal", title: "region" }
+          tooltip:
+            - { field: "order_date", type: "ordinal", title: "order_date", timeUnit: "yearmonth" }
+            - { field: "region", type: "nominal", title: "region" }
+            - { field: "amount", type: "quantitative", title: "Sales", aggregate: "sum", format: ",.0f" }
+  - id: "b_kpi2"
+    type: "big-number"
+    metadata:
+      data: "monthly_sales"
+      value: { field: "amount", aggregate: "mean" }
+      label: "Average order"
+      format: { kind: "thousands", decimals: 1 }
+clients:
+  dbx:
+    aiModel: "example-model"

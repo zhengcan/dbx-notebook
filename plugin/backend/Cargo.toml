@@ -1,0 +1,23 @@
+[package]
+name = "dbx-plugin-plugin"
+version = "0.6.0-rc1"
+edition = "2021"
+license = "MIT"
+
+[workspace]
+exclude = ["notebook-files", "result-engine", "pdf-export"]
+
+[dependencies]
+dbx-plugin-sdk = { version = "0.1.0" }
+serde_json = "1"
+notebook-files = { path = "notebook-files" }
+result-engine = { path = "result-engine" }
+pdf-export = { path = "pdf-export" }
+
+# Keep plugin binaries close to the host app's size: default release settings
+# leave ~20MB of symbols and unoptimized generic code in an OpenDAL-sized backend.
+# panic stays "unwind" so the sidecar protocol can report panics as errors.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

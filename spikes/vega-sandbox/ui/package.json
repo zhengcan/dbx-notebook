@@ -1,0 +1,2 @@
+{"name":"vega-sandbox-ui","private":true,"type":"module","scripts":{"build":"vite build"},
+"dependencies":{"vega":"^5","vega-lite":"^5","vega-embed":"^6","vega-interpreter":"^1"},"devDependencies":{"vite":"^5","playwright":"^1"}}

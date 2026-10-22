@@ -1,0 +1,89 @@
+{
+  "$schema": "https://raw.githubusercontent.com/t8y2/dbx/plugin-sdk-v1/plugins/manifest.schema.json",
+  "manifest_version": 1,
+  "id": "io.github.zhengcan.spike-files",
+  "name": "Spike Files",
+  "version": "0.1.0",
+  "publisher": "canzheng",
+  "description": "Spike Files plugin for DBX.",
+  "icon": "assets/plugin.svg",
+  "engines": {
+    "dbx": ">=0.5.68",
+    "host_api": "1"
+  },
+  "entrypoints": {
+    "backend": {
+      "executable": "bin/dbx-plugin-spike-files"
+    },
+    "ui": {
+      "root": "ui",
+      "entry": "ui/index.html"
+    }
+  },
+  "contributions": [
+    {
+      "type": "connection-provider",
+      "id": "io.github.zhengcan.spike-files.connection",
+      "label": "Spike Files connection",
+      "icon": "assets/plugin.svg",
+      "database_type": "spike-files",
+      "description": "Connection form contributed by Spike Files.",
+      "fields": [
+        {
+          "key": "display_name",
+          "label": "Connection name",
+          "type": "text",
+          "default": "Spike Files connection",
+          "binding": "name",
+          "required": true
+        },
+        {
+          "key": "host",
+          "label": "Host",
+          "type": "text",
+          "default": "localhost",
+          "binding": "host",
+          "required": true
+        },
+        {
+          "key": "port",
+          "label": "Port",
+          "type": "number",
+          "default": 0,
+          "binding": "port",
+          "required": true
+        }
+      ],
+      "workbench": "io.github.zhengcan.spike-files.workbench",
+      "capabilities": ["test", "connect", "disconnect"]
+    },
+    {
+      "type": "workbench",
+      "id": "io.github.zhengcan.spike-files.workbench",
+      "label": "Spike Files Workbench",
+      "description": "Sandboxed UI contributed by Spike Files.",
+      "icon": "assets/plugin.svg"
+    }
+  ],
+  "localizations": {
+    "zh-CN": {
+      "name": "Spike Files",
+      "description": "Spike Files plugin for DBX.",
+      "contributions": {
+        "io.github.zhengcan.spike-files.connection": {
+          "label": "Spike Files 连接",
+          "description": "由插件声明的连接表单。",
+          "fields": {
+            "display_name": { "label": "连接名称" },
+            "host": { "label": "主机" },
+            "port": { "label": "端口" }
+          }
+        },
+        "io.github.zhengcan.spike-files.workbench": {
+          "label": "Spike Files 工作台",
+          "description": "由插件提供的沙箱工作台界面。"
+        }
+      }
+    }
+  }
+}

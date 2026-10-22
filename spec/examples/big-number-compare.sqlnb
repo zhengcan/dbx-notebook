@@ -1,0 +1,35 @@
+sqlnb: "1"
+metadata:
+  title: "Big-number filter and comparison"
+  createdAt: "2026-10-20T09:00:00Z"
+  modifiedAt: "2026-10-20T09:00:00Z"
+settings:
+  defaultConnection: "prod-pg"
+  outputs: "separate"
+connections:
+  - name: "prod-pg"
+    dialect: "postgres"
+blocks:
+  - id: "b_sal1"
+    type: "sql"
+    content: |
+      SELECT order_date, region, customer_id, amount FROM sales
+    metadata:
+      resultName: "sales"
+      connection: "prod-pg"
+  - id: "b_kpi9"
+    type: "big-number"
+    metadata:
+      data: "sales"
+      value: { field: "amount", aggregate: "sum" }
+      label: "EU sales"
+      metrics:
+        - label: "EU sales"
+          field: "amount"
+          aggregate: "sum"
+          filter:
+            - { field: "region", op: "=", value: "EU" }
+          compare: { kind: "mom", dateField: "order_date" }
+        - label: "Customers"
+          field: "customer_id"
+          aggregate: "distinct"

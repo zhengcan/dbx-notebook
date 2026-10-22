@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sqlnb.dev/schema/sqlnb-v1.schema.json",
+  "title": "sqlnb v1 notebook",
+  "type": "object",
+  "required": ["sqlnb", "blocks"],
+  "properties": {
+    "sqlnb": { "const": "1" },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "createdAt": { "type": "string" },
+        "modifiedAt": { "type": "string" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "defaultConnection": { "type": "string" },
+        "defaultDatabase": { "type": "string" },
+        "defaultSchema": { "type": "string" },
+        "maxRows": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "outputs": { "enum": ["separate", "inline", "none"] }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "dialect": { "type": "string" }
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "clients": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    }
+  },
+  "$defs": {
+    "blockId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "resultName": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,62}$" },
+    "output": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" }
+            }
+          }
+        },
+        "rows": { "type": "array", "items": { "type": "array" } },
+        "executedAt": { "type": "string" },
+        "elapsedMs": { "type": "number", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "error": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "sqlHash": { "type": "string" },
+        "params": { "type": "object" }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/blockId" },
+        "type": { "type": "string", "minLength": 1 },
+        "content": { "type": "string" },
+        "metadata": { "type": "object" },
+        "outputs": { "$ref": "#/$defs/output" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "markdown" } }, "required": ["type"] },
+          "then": { "required": ["content"], "properties": { "content": { "type": "string" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "input" } }, "required": ["type"] },
+          "then": {
+            "required": ["metadata"],
+            "properties": {
+              "metadata": {
+                "type": "object",
+                "required": ["variable", "inputType"],
+                "properties": {
+                  "variable": { "$ref": "#/$defs/resultName" },
+                  "inputType": { "enum": ["text", "number", "date", "boolean", "select"] },
+                  "value": {},
+                  "options": {
+                    "type": "array",
+                    "items": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
+                  },
+                  "multiple": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "sql" } }, "required": ["type"] },
+          "then": {
+            "required": ["content"],
+            "properties": {
+              "content": { "type": "string" },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "resultName": { "$ref": "#/$defs/resultName" },
+                  "connection": { "type": "string" },
+                  "database": { "type": "string" },
+                  "schema": { "type": "string" },
+                  "source": { "enum": ["database", "results"], "default": "database" },
+                  "clients": { "type": "object", "additionalProperties": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "chart" } }, "required": ["type"] },
+          "then": {
+            "required": ["metadata"],
+            "properties": {
+              "metadata": {
+                "type": "object",
+                "required": ["data", "spec"],
+                "properties": {
+                  "data": { "$ref": "#/$defs/resultName" },
+                  "spec": { "type": "object" },
+                  "pivot": { "description": "Optional pivot config { rows, columns, values, totals?, sort?, summaryLabel? }. Additive label fields (0.5.11): rows[]/columns[] entries may carry label, valueLabels, nullLabel; values[].format may carry unit and scale; pivot may carry summaryLabel. Not constrained by this schema: invalid or unknown values are dropped with a normalizer warning, never a validation error." },
+                  "chartOptions": { "description": "Optional chart options { type, stacking?, labels?, title?, bins?, timeAxis?, axisTitles? }. axisTitles ({ x?, y?, legend? }) is additive (0.5.11). Not constrained by this schema; see pivot." }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "big-number" } }, "required": ["type"] },
+          "then": {
+            "required": ["metadata"],
+            "properties": {
+              "metadata": {
+                "type": "object",
+                "required": ["data", "value"],
+                "properties": {
+                  "data": { "type": "string" },
+                  "metrics": { "description": "Optional array of metric entries { label?, field, aggregate?, format?, filter?, compare? }. Additive in sqlnb-v1 (0.5.10): aggregate \"distinct\", filter[] and compare{} are allowed on entries; unknown keys and values are preserved and not constrained by this schema." },
+                  "value": {
+                    "type": "object",
+                    "required": ["field"],
+                    "properties": {
+                      "field": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

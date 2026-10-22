@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.dbx-dev/
+target/
+plugin/ui/
+.superpowers/
+.DS_Store
+spikes/pdf-oxide/out/
+spikes/pdf-carbonpdf/out/
+.smoke-chart/
+/docs/superpowers/
+/docs/upstream/
+/docs/verification/
+*.log

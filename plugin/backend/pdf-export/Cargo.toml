@@ -1,0 +1,13 @@
+[package]
+name = "pdf-export"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace]
+
+[dependencies]
+notebook-files = { path = "../notebook-files" }
+tokio = { version = "1", features = ["rt", "time", "macros"] }
+futures = "0.3"
+chromiumoxide = { version = "0.8", default-features = false, features = ["tokio-runtime"] }

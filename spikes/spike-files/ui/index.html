@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike Files</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px; background: radial-gradient(circle at top left, rgba(109,93,252,.2), transparent 40%), Canvas; color: CanvasText; }
+      main { width: min(680px, 100%); padding: 32px; border: 1px solid color-mix(in srgb, CanvasText 16%, transparent); border-radius: 20px; background: color-mix(in srgb, Canvas 92%, transparent); box-shadow: 0 24px 80px rgba(0,0,0,.12); }
+      .eyebrow { color: #6d5dfc; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { margin: 10px 0; font-size: clamp(28px, 5vw, 46px); }
+      p { line-height: 1.65; opacity: .74; }
+      button { margin-top: 20px; border: 0; border-radius: 12px; padding: 12px 18px; background: #6d5dfc; color: white; font: inherit; font-weight: 650; cursor: pointer; }
+      button:disabled { opacity: .55; cursor: wait; }
+      pre { margin-top: 20px; min-height: 92px; overflow: auto; padding: 16px; border-radius: 12px; background: color-mix(in srgb, CanvasText 7%, transparent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow" id="eyebrow">DBX plugin workbench</div>
+      <h1>Spike Files</h1>
+      <p id="description">This sandboxed page talks to the Rust sidecar only through the DBX Host Bridge.</p>
+      <button id="ping" type="button">Invoke sidecar</button>
+      <div style="margin-top:16px">
+        <input id="path" placeholder="path" style="width:100%;padding:8px">
+        <button id="pickOpen" type="button">sidecar pickOpen (rfd)</button>
+        <button id="pickSave" type="button">sidecar pickSave (rfd)</button>
+        <button id="pickOpenOs" type="button">pickOpen (osascript)</button>
+        <button id="pickSaveOs" type="button">pickSave (osascript)</button>
+        <button id="read" type="button">read path</button>
+        <button id="write" type="button">write "hello" to path</button>
+        <button id="ftPick" type="button">fileTransfer.pick</button>
+        <button id="ftSave" type="button">fileTransfer.beginSave</button>
+      </div>
+      <pre id="result">Waiting for DBX plugin host…</pre>
+    </main>
+    <script>
+      const result = document.querySelector("#result");
+      const button = document.querySelector("#ping");
+      const copy = {
+        en: { eyebrow: "DBX plugin workbench", description: "This sandboxed page talks to the Rust sidecar only through the DBX Host Bridge.", button: "Invoke sidecar", ready: "Ready", calling: "Calling sidecar…", error: "Error" },
+        zh: { eyebrow: "DBX 插件工作台", description: "此沙箱页面仅通过 DBX Host Bridge 与 Rust Sidecar 通信。", button: "调用 Sidecar", ready: "已就绪", calling: "正在调用 Sidecar…", error: "错误" }
+      };
+      let text = copy.en;
+      window.dbxPlugin.ready.then(() => {
+        text = window.dbxPlugin.locale.toLowerCase().startsWith("zh") ? copy.zh : copy.en;
+        document.querySelector("#eyebrow").textContent = text.eyebrow;
+        document.querySelector("#description").textContent = text.description;
+        button.textContent = text.button;
+        result.textContent = text.ready;
+      });
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        result.textContent = text.calling;
+        try {
+          result.textContent = JSON.stringify(await window.dbxPlugin.invoke("spike-files/ping", { connectionId: window.dbxPlugin.context?.connectionId }), null, 2);
+        } catch (error) {
+          result.textContent = `${text.error}: ${error.message}`;
+        } finally {
+          button.disabled = false;
+        }
+      });
+      const show = (v) => { result.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2); };
+      const pathEl = document.querySelector("#path");
+      const run = (id, fn) => document.querySelector(id).addEventListener("click", async () => {
+        try {
+          const r = await fn();
+          if (r && r.path) pathEl.value = r.path;
+          show(r === undefined ? "undefined" : r === null ? "null" : r);
+        } catch (e) { show("Error: " + e.message); }
+      });
+      const inv = (m, p) => window.dbxPlugin.invoke(m, p);
+      run("#pickOpen", () => inv("spike/pickOpen", {}));
+      run("#pickSave", () => inv("spike/pickSave", { name: "spike.txt" }));
+      run("#pickOpenOs", () => inv("spike/pickOpenOsascript", {}));
+      run("#pickSaveOs", () => inv("spike/pickSaveOsascript", { name: "spike.txt" }));
+      run("#read", () => inv("spike/read", { path: pathEl.value }));
+      run("#write", () => inv("spike/write", { path: pathEl.value, text: "hello" }));
+      run("#ftPick", async () => {
+        const ft = window.dbxPlugin.fileTransfer;
+        if (!ft) return "fileTransfer undefined";
+        return { capabilities: window.dbxPlugin.capabilities, pick: await ft.pick({ multiple: false }) };
+      });
+      run("#ftSave", async () => {
+        const ft = window.dbxPlugin.fileTransfer;
+        if (!ft) return "fileTransfer undefined";
+        return await ft.beginSave({ name: "spike.txt" });
+      });
+    </script>
+  </body>
+</html>

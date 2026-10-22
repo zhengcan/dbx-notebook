@@ -1,0 +1,34 @@
+name: Release DBX plugin
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Pinned to a full commit of t8y2/dbx main that has the `working-directory`
+    # input. The documented `plugin-sdk-v1` tag does not exist upstream, so it
+    # cannot be resolved; a SHA is reproducible, unlike the moving `main`.
+    uses: t8y2/dbx/.github/workflows/plugin-release-reusable.yml@v0.6.48
+    with:
+      release-tag: ${{ github.event.release.tag_name }}
+      working-directory: plugin
+      # The reusable workflow does not install JS dependencies and `dbx-plugin
+      # package` does not run the UI build, so do both first. The repo is an npm
+      # workspace (packages/*, plugin/ui-src) with its lockfile at the root.
+      # On Linux, rfd's xdg-portal backend pulls in wayland-sys, whose build
+      # script needs wayland-client.pc (libwayland-dev) and pkg-config.
+      package-command: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev pkg-config
+        fi
+        npm ci --prefix .. && npm --prefix ui-src run build && dbx-plugin package .
+      package-path: dist/*.dbxp
+      metadata-path: dist/*.artifact.json
+      go-version: ''
+      rust-toolchain: stable
+      plugin-cli-version: 0.1.9
