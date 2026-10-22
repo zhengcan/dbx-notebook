@@ -1,0 +1,17 @@
+{
+  "name": "SQL Notebook",
+  "description": "A Jupyter-style SQL notebook for DBX, stored as plain-text .sqlnb YAML.",
+  "icon": "plugin/assets/plugin.svg",
+  "tags": ["notebook", "sql", "chart", "report"],
+  "permissions": ["host.data:read", "host.schema:read", "host.ai", "host.storage", "host.workbench", "host.connections:read"],
+  "source": "https://github.com/zhengcan/dbx-notebook",
+  "homepage": "https://github.com/zhengcan/dbx-notebook",
+  "license": "MIT",
+  "releaseNotes": "Initial release.",
+  "localizations": {
+    "zh-CN": {
+      "name": "SQL Notebook",
+      "description": "类似 Jupyter Notebook 的 DBX SQL 笔记本，文件为纯文本 .sqlnb（YAML）。"
+    }
+  }
+}
