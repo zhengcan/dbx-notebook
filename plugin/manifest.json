@@ -3,8 +3,8 @@
   "manifest_version": 1,
   "id": "io.github.zhengcan.dbx-notebook",
   "name": "SQL Notebook",
-  "version": "0.6.0",
-  "publisher": "canzheng",
+  "version": "0.6.1",
+  "publisher": "zhengcan",
   "description": "Notebook-style SQL workbench for DBX.",
   "icon": "assets/plugin.svg",
   "engines": {

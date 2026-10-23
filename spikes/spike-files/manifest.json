@@ -4,7 +4,7 @@
   "id": "io.github.zhengcan.spike-files",
   "name": "Spike Files",
   "version": "0.1.0",
-  "publisher": "canzheng",
+  "publisher": "zhengcan",
   "description": "Spike Files plugin for DBX.",
   "icon": "assets/plugin.svg",
   "engines": {

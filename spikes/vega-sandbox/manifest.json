@@ -4,7 +4,7 @@
   "id": "io.github.zhengcan.spike-vega",
   "name": "Vega Sandbox",
   "version": "0.1.0",
-  "publisher": "canzheng",
+  "publisher": "zhengcan",
   "description": "Vega Sandbox plugin for DBX.",
   "icon": "assets/plugin.svg",
   "engines": {
